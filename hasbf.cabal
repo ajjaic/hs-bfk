@@ -19,6 +19,9 @@ executable hasbf
   main-is:             Main.hs
   -- other-modules:
   -- other-extensions:
-  build-depends:       base >=4.7 && <4.8, attoparsec, text
+  build-depends:       base >=4.7 && <4.8
+                     , attoparsec
+                     , text
+                     , transformers
   -- hs-source-dirs:
   default-language:    Haskell2010

@@ -23,5 +23,6 @@ executable hasbf
                      , attoparsec
                      , text
                      , transformers
+                     , array
   -- hs-source-dirs:
   default-language:    Haskell2010

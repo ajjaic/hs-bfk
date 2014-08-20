@@ -58,14 +58,12 @@ type MachineStateIO a = MaybeT (StateT Machine IO) a
             {-Loop c       -> exLoop-}
         {-executeProgram' xs-}
 
-exCommand :: Command -> MachineStateIO (Maybe ())
-exCommand = undefined
+exCommand :: Command -> MachineStateIO ()
+exCommand IncDataPtr = incDataPtr
+exCommand DecDataPtr = decDataPtr
 
-an :: MachineStateIO ()
-an = MaybeT (return $ (Just ()))
-
-bin :: MachineStateIO ()
-bin = do
+incDataPtr:: MachineStateIO ()
+incDataPtr = do
     m <- lift get
     maybe (MaybeT $ return Nothing) updatestate $ movePtr m (+1)
     where
@@ -73,27 +71,14 @@ bin = do
         lift $ put m'
         return ()
 
-type MachineM a = StateT Machine IO (Maybe a)
-
-{-newI :: StateT Machine IO-}
-
-incDataPtr :: MachineStateIO (Maybe ())
-incDataPtr = do
-    m <- lift get
-    maybe (return Nothing) updatestate $ movePtr m (+1)
-    where
-     updatestate m' = do
-         lift $ put m'
-         return $ Just ()
-
-decDataPtr :: MachineStateIO (Maybe ())
+decDataPtr :: MachineStateIO ()
 decDataPtr = do
     m <- lift get
-    maybe (return Nothing) updatestate $ movePtr m (subtract 1)
+    maybe (MaybeT $ return Nothing) updatestate $ movePtr m (subtract 1)
     where
      updatestate m' = do
          lift $ put m'
-         return $ Just ()
+         return ()
 
 incByteAtPtr :: MachineStateIO ()
 incByteAtPtr = do
@@ -113,28 +98,41 @@ opByteAtPtr :: MachineStateIO ()
 opByteAtPtr = do
     m <- lift get
     let e = eAtPtr m
-    lift $ liftIO $ putStrLn $ show e
+    lift $ liftIO $ putStrLn (show e)
     return ()
 
-{-ipByteAtPtr :: MachineStateIO ()-}
-{-ipByteAtPtr = do-}
-    {-m <- lift get-}
-    {-b <- lift $ liftIO getbyte-}
-    {-maybe (return Nothing) (insertbyte m) b-}
-    {-where-}
-     {-insertbyte m b = do-}
-        {-let nm = setByteAtPtr m b-}
-        {-lift $ put nm-}
-        {-return ()-}
-     {-getbyte = do-}
-        {-s <- getLine-}
-        {-let byte_s = reads s :: [(Word8, String)]-}
-        {-case byte_s of-}
-            {-[(a,"")] -> return $ Just a-}
-            {-_ -> return Nothing-}
+ipByteAtPtr :: MachineStateIO ()
+ipByteAtPtr = do
+    m <- lift get
+    b <- lift $ liftIO getbyte
+    maybe (MaybeT $ return Nothing) (insertbyte m) b
+    where
+     insertbyte m b = do
+        let nm = setByteAtPtr m b
+        lift $ put nm
+        return ()
+     getbyte = do
+        s <- getLine
+        let byte_s = reads s :: [(Word8, String)]
+        case byte_s of
+            [(a,"")] -> return $ Just a
+            _ -> return Nothing
 
-{-exLoop :: [Command] -> MachineStateIO ()-}
-{-exLoop cmds = do-}
-    {-m <- lift get-}
-    {-let e = eAtPtr m-}
-    {-if e == 0 then return-}
+exLoop :: [Command] -> MachineStateIO ()
+exLoop cmds = exLoop' cmds cmds
+    where
+     exLoop' [] cmds = do
+
+
+    do
+    m <- lift get
+    let e = eAtPtr m
+
+
+
+
+
+
+
+
+

@@ -12,8 +12,8 @@ import Data.Word (Word8)
 import Data.Array
 
 import Control.Monad.IO.Class
-type Size = Int
 
+type Size = Int
 data Machine = Machine {
                 memarray :: Array Int Word8,
                 instrptr :: Int,
@@ -44,25 +44,20 @@ setByteAtPtr m w = m `modifyByte` (*0) `modifyByte` (+w)
 --
 type MachineStateIO a = MaybeT (StateT Machine IO) a
 
-{-executeProgram :: Program -> MachineStateIO (Maybe ())-}
-{-executeProgram (Program cmds) = executeProgram' cmds where-}
-    {-executeProgram' [] = return (Just ())-}
-    {-executeProgram' (x:xs) = do-}
-        {-case x of-}
-            {-IncDataPtr   -> incDataPtr-}
-            {-DecDataPtr   -> decDataPtr-}
-            {-IncByteAtPtr -> incByteAtPtr-}
-            {-DecByteAtPtr -> decByteAtPtr-}
-            {-OpByteAtPtr  -> opByteAtPtr-}
-            {-IpByteAtPtr  -> ipByteAtPtr-}
-            {-Loop c       -> exLoop-}
-        {-executeProgram' xs-}
 
 exCommand :: Command -> MachineStateIO ()
-exCommand IncDataPtr = incDataPtr
-exCommand DecDataPtr = decDataPtr
+exCommand IncDataPtr   = incDataPtr
+exCommand DecDataPtr   = decDataPtr
+exCommand IncByteAtPtr = incByteAtPtr
+exCommand DecByteAtPtr = decByteAtPtr
+exCommand OpByteAtPtr  = opByteAtPtr
+exCommand IpByteAtPtr  = ipByteAtPtr
+exCommand (Loop cmds)  = exLoop cmds
 
-incDataPtr:: MachineStateIO ()
+executeProgram :: Program -> MachineStateIO ()
+executeProgram (Program cmds) = sequence_ $ map exCommand cmds
+
+incDataPtr :: MachineStateIO ()
 incDataPtr = do
     m <- lift get
     maybe (MaybeT $ return Nothing) updatestate $ movePtr m (+1)
@@ -119,20 +114,9 @@ ipByteAtPtr = do
             _ -> return Nothing
 
 exLoop :: [Command] -> MachineStateIO ()
-exLoop cmds = exLoop' cmds cmds
-    where
-     exLoop' [] cmds = do
-
-
-    do
+exLoop cmds = do
     m <- lift get
     let e = eAtPtr m
-
-
-
-
-
-
-
-
-
+    if e == 0
+        then return ()
+        else sequence_ (map exCommand cmds) >> exLoop cmds

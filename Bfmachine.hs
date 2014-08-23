@@ -1,23 +1,30 @@
 module Bfmachine (
-    incDataPtr
-  , MachineStateIO
+      incDataPtr
+    , decDataPtr
+    , incByteAtPtr
+    , decByteAtPtr
+    , opByteAtPtr
+    , ipByteAtPtr
+    , exLoop
+    , newMachine
 ) where
 
 import Bfparser
 
-import Control.Monad.Trans.State.Lazy
-import Control.Monad.Trans.Maybe
+import Control.Monad.Trans.State.Lazy (StateT, get, put)
+import Control.Monad.Trans.Maybe (MaybeT (..))
 import Control.Monad.Trans.Class (lift)
 import Data.Word (Word8)
-import Data.Array
+import Data.Array (Array, array, (!), (//))
+import Control.Monad.IO.Class (liftIO)
+import Test.QuickCheck
 
-import Control.Monad.IO.Class
-
-type Size = Int
+type Ptr     = Int
+type Size    = Int
 data Machine = Machine {
-                memarray :: Array Int Word8,
-                instrptr :: Int,
-                memsize :: Size
+                memarray :: Array Ptr Word8,
+                instrptr :: Ptr,
+                memsize  :: Size
                 }
 
 newMachine :: Size -> Machine
@@ -26,7 +33,7 @@ newMachine s = Machine (array (1, s) $ zip [1..] (repeat 0)) 1 s
 eAtPtr :: Machine -> Word8
 eAtPtr m = (memarray m) ! (instrptr m)
 
-movePtr :: Machine -> (Int -> Int) -> Maybe Machine
+movePtr :: Machine -> (Ptr -> Ptr) -> Maybe Machine
 movePtr m fn = if newptr > (memsize m)
                 then Nothing
                 else Just m {instrptr = newptr}
@@ -120,3 +127,6 @@ exLoop cmds = do
     if e == 0
         then return ()
         else sequence_ (map exCommand cmds) >> exLoop cmds
+
+--Property based tests
+

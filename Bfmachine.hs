@@ -21,6 +21,7 @@ import Data.Word (Word8)
 import Data.Array (Array, array, bounds, elems, (!), (//))
 import Control.Monad.IO.Class (liftIO)
 import Control.Applicative ((<$>))
+import Data.Maybe (isNothing)
 import Test.QuickCheck
 
 type Ptr     = Int
@@ -143,7 +144,16 @@ prop_conformstart = forAll (arbitrary :: Gen Machine) conformsize
      conformsize (Machine arr ptr size) = size >= 100
                                             && size <= 200
                                             && ptr == 1
-                                            && (bounds arr) == (1, size)
+                                            && size == (snd $ bounds arr)
                                             && (null $ filter (/=0) (elems arr))
 
-fmain = quickCheck prop_conformstart
+--Moving the pointer as many times as the size of the Machine array
+--always gives 'Nothing'
+prop_memexhaustedptr :: Property
+prop_memexhaustedptr = forAll (arbitrary :: Gen Machine) helper
+    where
+        helper m = isNothing (movePtr m (+(memsize m)))
+
+{-prop_memvalidptr = forAll (arbitrary :: Gen Machine) helper-}
+
+fmain = quickCheck prop_conformstart >> quickCheck prop_memexhaustedptr

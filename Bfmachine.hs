@@ -1,13 +1,16 @@
-module Bfmachine (
-      incDataPtr
-    , decDataPtr
-    , incByteAtPtr
-    , decByteAtPtr
-    , opByteAtPtr
-    , ipByteAtPtr
-    , exLoop
-    , newMachine
-) where
+{-module Bfmachine (-}
+      {-incDataPtr-}
+    {-, decDataPtr-}
+    {-, incByteAtPtr-}
+    {-, decByteAtPtr-}
+    {-, opByteAtPtr-}
+    {-, ipByteAtPtr-}
+    {-, exLoop-}
+    {-, newMachine-}
+    {-, prop_conformstart-}
+{-) where-}
+
+module Bfmachine where
 
 import Bfparser
 
@@ -15,8 +18,9 @@ import Control.Monad.Trans.State.Lazy (StateT, get, put)
 import Control.Monad.Trans.Maybe (MaybeT (..))
 import Control.Monad.Trans.Class (lift)
 import Data.Word (Word8)
-import Data.Array (Array, array, (!), (//))
+import Data.Array (Array, array, bounds, elems, (!), (//))
 import Control.Monad.IO.Class (liftIO)
+import Control.Applicative ((<$>))
 import Test.QuickCheck
 
 type Ptr     = Int
@@ -25,10 +29,10 @@ data Machine = Machine {
                 memarray :: Array Ptr Word8,
                 instrptr :: Ptr,
                 memsize  :: Size
-                }
+                } deriving (Show)
 
 newMachine :: Size -> Machine
-newMachine s = Machine (array (1, s) $ zip [1..] (repeat 0)) 1 s
+newMachine s = Machine (array (1, s) $ zip [1..s] (repeat 0)) 1 s
 
 eAtPtr :: Machine -> Word8
 eAtPtr m = (memarray m) ! (instrptr m)
@@ -130,3 +134,16 @@ exLoop cmds = do
 
 --Property based tests
 
+instance Arbitrary Machine where
+    arbitrary = newMachine <$> (choose (100, 200))
+
+prop_conformstart :: Property
+prop_conformstart = forAll (arbitrary :: Gen Machine) conformsize
+    where
+     conformsize (Machine arr ptr size) = size >= 100
+                                            && size <= 200
+                                            && ptr == 1
+                                            && (bounds arr) == (1, size)
+                                            && (null $ filter (/=0) (elems arr))
+
+fmain = quickCheck prop_conformstart

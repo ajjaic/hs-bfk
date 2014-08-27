@@ -1,4 +1,4 @@
-{-module Bfmachine (-}
+module Bfmachine where
       {-incDataPtr-}
     {-, decDataPtr-}
     {-, incByteAtPtr-}
@@ -8,9 +8,6 @@
     {-, exLoop-}
     {-, newMachine-}
     {-, prop_conformstart-}
-{-) where-}
-
-module Bfmachine where
 
 import Bfparser
 
@@ -21,7 +18,7 @@ import Data.Word (Word8)
 import Data.Array (Array, array, bounds, elems, (!), (//))
 import Control.Monad.IO.Class (liftIO)
 import Control.Applicative ((<$>))
-import Data.Maybe (isNothing)
+import Data.Maybe (isNothing, fromJust)
 import Test.QuickCheck
 
 type Ptr     = Int
@@ -39,7 +36,7 @@ eAtPtr :: Machine -> Word8
 eAtPtr m = (memarray m) ! (instrptr m)
 
 movePtr :: Machine -> (Ptr -> Ptr) -> Maybe Machine
-movePtr m fn = if newptr > (memsize m)
+movePtr m fn = if (newptr > (memsize m)) || (newptr < 1)
                 then Nothing
                 else Just m {instrptr = newptr}
     where
@@ -136,24 +133,46 @@ exLoop cmds = do
 --Property based tests
 
 instance Arbitrary Machine where
-    arbitrary = newMachine <$> (choose (100, 200))
+    arbitrary = do
+        a <- choose (10, 20)
+        b <- choose (10, a)
+        return (newMachine a) {instrptr = b}
 
-prop_conformstart :: Property
-prop_conformstart = forAll (arbitrary :: Gen Machine) conformsize
+--Incrementing the pointer, means that the difference between
+--the new and old pointer is always 1 or the old pointer is
+--the same as the size of the machine if incrementing goes
+--past the edge of machine memory
+prop_memincvalidator :: Machine -> Bool
+prop_memincvalidator m = newinstrptr
     where
-     conformsize (Machine arr ptr size) = size >= 100
-                                            && size <= 200
-                                            && ptr == 1
-                                            && size == (snd $ bounds arr)
-                                            && (null $ filter (/=0) (elems arr))
+        oldinstrptr = instrptr m
+        newinstrptr = let newm = movePtr m (+1)
+                       in if isNothing newm
+                            then oldinstrptr == (memsize m)
+                            else ((instrptr $ fromJust newm) - oldinstrptr) == 1
+
+--Decrementing the pointer, means that the difference between
+--the old and new pointer is always 1 or the old pointer is
+--0 if decrementing goes below the beginning of machine memory
+prop_memdecvalidator :: Machine -> Bool
+prop_memdecvalidator m = newinstrptr
+    where
+        oldinstrptr = instrptr m
+        newinstrptr = let newm = movePtr m (subtract 1)
+                       in if isNothing newm
+                            then oldinstrptr == 1
+                            else (oldinstrptr - (instrptr $ fromJust newm)) == 1
 
 --Moving the pointer as many times as the size of the Machine array
 --always gives 'Nothing'
 prop_memexhaustedptr :: Property
-prop_memexhaustedptr = forAll (arbitrary :: Gen Machine) helper
+prop_memexhaustedptr = forAll machines helper
     where
         helper m = isNothing (movePtr m (+(memsize m)))
+        machines = do
+            a <- choose (10, 20)
+            return $ newMachine a
 
-{-prop_memvalidptr = forAll (arbitrary :: Gen Machine) helper-}
 
-fmain = quickCheck prop_conformstart >> quickCheck prop_memexhaustedptr
+fmain = quickCheck prop_memdecvalidator
+vmain = verboseCheck prop_memdecvalidator

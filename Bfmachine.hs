@@ -1,13 +1,7 @@
-module Bfmachine where
-      {-incDataPtr-}
-    {-, decDataPtr-}
-    {-, incByteAtPtr-}
-    {-, decByteAtPtr-}
-    {-, opByteAtPtr-}
-    {-, ipByteAtPtr-}
-    {-, exLoop-}
-    {-, newMachine-}
-    {-, prop_conformstart-}
+module Bfmachine (
+      executeProgram
+    , newMachine
+) where
 
 import Bfparser
 
@@ -15,9 +9,8 @@ import Control.Monad.Trans.State.Lazy (StateT, get, put)
 import Control.Monad.Trans.Maybe (MaybeT (..))
 import Control.Monad.Trans.Class (lift)
 import Data.Word (Word8)
-import Data.Array (Array, array, bounds, elems, (!), (//))
+import Data.Array (Array, array, (!), (//))
 import Control.Monad.IO.Class (liftIO)
-import Control.Applicative ((<$>))
 import Data.Maybe (isNothing, fromJust)
 import Test.QuickCheck
 
@@ -53,6 +46,8 @@ setByteAtPtr m w = m `modifyByte` (*0) `modifyByte` (+w)
 --
 type MachineStateIO a = MaybeT (StateT Machine IO) a
 
+executeProgram :: Program -> MachineStateIO ()
+executeProgram (Program cmds) = sequence_ $ map exCommand cmds
 
 exCommand :: Command -> MachineStateIO ()
 exCommand IncDataPtr   = incDataPtr
@@ -62,9 +57,6 @@ exCommand DecByteAtPtr = decByteAtPtr
 exCommand OpByteAtPtr  = opByteAtPtr
 exCommand IpByteAtPtr  = ipByteAtPtr
 exCommand (Loop cmds)  = exLoop cmds
-
-executeProgram :: Program -> MachineStateIO ()
-executeProgram (Program cmds) = sequence_ $ map exCommand cmds
 
 incDataPtr :: MachineStateIO ()
 incDataPtr = do
@@ -173,6 +165,7 @@ prop_memexhaustedptr = forAll machines helper
             a <- choose (10, 20)
             return $ newMachine a
 
-
-fmain = quickCheck prop_memdecvalidator
-vmain = verboseCheck prop_memdecvalidator
+runTests = quickCheck $
+        prop_memdecvalidator
+   .&&. prop_memexhaustedptr
+   .&&. prop_memincvalidator

@@ -3,19 +3,20 @@
 module Bfparser (
     Program (..)
   , Command (..)
+  , parseProgram
 ) where
 
-import Data.Attoparsec.Text --(Parser, char, choice, parseTest, (<?>), many')
-import Control.Applicative --((<$>), pure)
+import Data.Attoparsec.Text (Parser, endOfInput, char, many')
+import Control.Applicative ((<|>), (<*), (*>), (<$>))
 {-import Data.Text-}
 
-m1 = "[+++..>>>>--[,,..++--]++--]"
-m2 = "+++..>>>>--,,..++--++--"
+{-m1 = "[+++..>>>>--[,,..++--]++--]"-}
+{-m2 = "+++..>>>>--,,..++--++--"-}
 
-s1 = parseTest parseProgram "<>b><"
-s2 = parse parseProgram "<>b><"
-s3 = parseOnly parseProgram m1
-s4 = parseOnly parseProgram m2
+{-s1 = parseTest parseProgram "<>b><"-}
+{-s2 = parse parseProgram "<>b><"-}
+{-s3 = parseOnly parseProgram m1-}
+{-s4 = parseOnly parseProgram m2-}
 
 newtype Program = Program [Command] deriving (Show)
 
@@ -55,9 +56,9 @@ parseIpByteAtPtr :: Parser Command
 parseIpByteAtPtr = const IpByteAtPtr <$> char ','
 
 parseLoop :: Parser Command
-parseLoop = Loop <$> (char '[' *> (many' parseCommands) <* char ']')
+parseLoop = Loop <$> (char '[' *> many' parseCommands <* char ']')
 
 parseProgram :: Parser Program
-parseProgram = Program <$> (many' parseCommands) <* endOfInput
+parseProgram = Program <$> many' parseCommands <* endOfInput
 
 
